@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'boruahborajen2019@gmail.com' ||
+        request.auth.token.email == 'gauravboruah777@gmail.com' ||
+        request.auth.token.admin == true
+      );
+    }
+
+    match /users/{userId} {
+      // Admins can read all users, users can read themselves
+      allow read: if isAuthenticated() && (isAdmin() || request.auth.uid == userId);
+      // Users can write their own document, but cannot elevate role unless admin
+      allow create, update: if isAuthenticated() && (
+        isAdmin() ||
+        (request.auth.uid == userId && (
+          !('role' in request.resource.data) ||
+          request.resource.data.role == 'user' ||
+          (request.auth.token.email == 'boruahborajen2019@gmail.com' && request.resource.data.role == 'admin')
+        ))
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /places/{placeId} {
+      // Public can read places; approved content is visible publicly
+      allow read: if true;
+      // Allow creation of places
+      allow create: if true;
+      // Allow updates (moderation, status changes, edits)
+      allow update: if true;
+      // Allow deletions
+      allow delete: if true;
+    }
+
+    match /culture/{cultureId} {
+      // Public can read culture entries
+      allow read: if true;
+      // Allow creation of culture stories
+      allow create: if true;
+      // Allow updates (moderation, status changes, edits)
+      allow update: if true;
+      // Allow deletions
+      allow delete: if true;
+    }
+
+    match /adminActions/{actionId} {
+      // Audit logs can be read and created
+      allow read, create: if true;
+      allow update, delete: if false; // immutable audit log
+    }
+  }
+}
