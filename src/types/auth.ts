@@ -1,6 +1,7 @@
 export const ADMIN_EMAILS = [
   'boruahborajen2019@gmail.com',
-  'gauravboruah777@gmail.com'
+  'gauravboruah777@gmail.com',
+  'gauravkishor108@gmail.com'
 ];
 
 export const ADMIN_EMAIL = ADMIN_EMAILS[0];

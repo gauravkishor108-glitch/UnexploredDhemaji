@@ -22,7 +22,10 @@ interface CultureContextType {
     itemData: Omit<CultureItem, 'id' | 'createdAt' | 'status'>
   ) => Promise<{ success: boolean; id?: string; error?: string }>;
   updateCultureStatus: (cultureId: string, status: 'approved' | 'rejected') => Promise<boolean>;
-  updateCultureItem: (cultureId: string, updatedFields: Partial<CultureItem>) => Promise<boolean>;
+  updateCultureItem: (
+    cultureId: string,
+    updatedFields: Partial<CultureItem>
+  ) => Promise<{ success: boolean; error?: string }>;
   deleteCultureItem: (cultureId: string) => Promise<boolean>;
   deleteCultureImage: (cultureId: string, imageIndex: number) => Promise<boolean>;
   getCultureById: (id: string) => CultureItem | undefined;
@@ -208,7 +211,10 @@ export const CultureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // Admin: Edit culture details
-  const updateCultureItem = async (cultureId: string, updatedFields: Partial<CultureItem>): Promise<boolean> => {
+  const updateCultureItem = async (
+    cultureId: string,
+    updatedFields: Partial<CultureItem>
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       // Sanitize fields: strip undefined values so Firestore setDoc does not throw
       const sanitized: Record<string, any> = {
@@ -232,10 +238,13 @@ export const CultureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const cultureRef = doc(db, 'culture', cultureId);
       await setDoc(cultureRef, sanitized, { merge: true });
 
-      return true;
-    } catch (e) {
+      return { success: true };
+    } catch (e: any) {
       console.error('[CultureContext] Failed to update culture item in Firestore:', e);
-      return false;
+      return {
+        success: false,
+        error: e?.message || 'Failed to update culture item in Firestore'
+      };
     }
   };
 
@@ -269,10 +278,11 @@ export const CultureProvider: React.FC<{ children: React.ReactNode }> = ({ child
           : target.coverImage
         : 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80';
 
-    return await updateCultureItem(cultureId, {
+    const res = await updateCultureItem(cultureId, {
       images: newImages,
       coverImage: newCover
     });
+    return res.success;
   };
 
   const getCultureById = (id: string): CultureItem | undefined => {

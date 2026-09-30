@@ -3,6 +3,7 @@ import { Place, PlaceCategory } from '../../types/place';
 import { usePlaces } from '../../context/PlacesContext';
 import { useAuth } from '../../context/AuthContext';
 import { InteractiveDhemajiMap } from '../tourism/InteractiveDhemajiMap';
+import { compressImageFile, compressDataUrlIfNeeded } from '../../utils/imageCompressor';
 import {
   X,
   Trash2,
@@ -72,27 +73,39 @@ export const EditPlaceModal: React.FC<EditPlaceModalProps> = ({
     setCoverImage(imgUrl);
   };
 
-  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [isCompressing, setIsCompressing] = useState(false);
+
+  const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      if (images.length >= 8) {
-        setErrorMsg('Maximum 8 images allowed.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        if (uploadEvent.target?.result) {
-          const resultStr = uploadEvent.target.result as string;
-          setImages(prev => [...prev, resultStr]);
-          if (!coverImage) {
-            setCoverImage(resultStr);
-          }
+    setIsCompressing(true);
+    setErrorMsg('');
+
+    try {
+      for (const file of Array.from(files)) {
+        if (images.length >= 8) {
+          setErrorMsg('Maximum 8 images allowed.');
+          break;
         }
-      };
-      reader.readAsDataURL(file);
-    });
+
+        const compressed = await compressImageFile(file, 1000, 1000, 0.75);
+        setImages(prev => {
+          if (prev.length >= 8) return prev;
+          const next = [...prev, compressed];
+          if (!coverImage) {
+            setCoverImage(compressed);
+          }
+          return next;
+        });
+      }
+    } catch (err: any) {
+      console.error('Image compression error:', err);
+      setErrorMsg('Could not process selected image.');
+    } finally {
+      setIsCompressing(false);
+      e.target.value = '';
+    }
   };
 
   const handleSave = async () => {
@@ -108,45 +121,58 @@ export const EditPlaceModal: React.FC<EditPlaceModalProps> = ({
     setIsSaving(true);
     setErrorMsg('');
 
-    const parsedThingsToDo = thingsToDoText
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
+    try {
+      const parsedThingsToDo = thingsToDoText
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
 
-    const success = await updatePlace(place.id, {
-      placeName: placeName.trim(),
-      description: description.trim(),
-      category,
-      address: address.trim(),
-      bestTimeToVisit: bestTimeToVisit.trim(),
-      latitude,
-      longitude,
-      images,
-      coverImage: coverImage || images[0],
-      thingsToDo: parsedThingsToDo
-    });
+      const compressedImages = await Promise.all(
+        images.map(img => compressDataUrlIfNeeded(img, 1000, 1000, 0.72))
+      );
+      const chosenCover = coverImage || compressedImages[0] || '';
+      const compressedCover = await compressDataUrlIfNeeded(chosenCover, 1000, 1000, 0.72);
 
-    setIsSaving(false);
+      const success = await updatePlace(place.id, {
+        placeName: placeName.trim(),
+        description: description.trim(),
+        category,
+        address: address.trim(),
+        bestTimeToVisit: bestTimeToVisit.trim(),
+        latitude,
+        longitude,
+        images: compressedImages,
+        coverImage: compressedCover || compressedImages[0] || '',
+        thingsToDo: parsedThingsToDo,
+        status: place.status
+      });
 
-    if (success) {
-      setSuccessMsg('Place updated successfully.');
-      if (user) {
-        await logAdminAction({
-          adminUid: user.uid,
-          adminEmail: user.email,
-          action: 'EDIT_PLACE',
-          contentType: 'place',
-          contentId: place.id,
-          contentTitle: placeName.trim(),
-          notes: `Updated category to ${category}, address to ${address}`
-        });
+      setIsSaving(false);
+
+      if (success) {
+        setSuccessMsg('Place updated successfully.');
+        if (user) {
+          await logAdminAction({
+            adminUid: user.uid,
+            adminEmail: user.email,
+            action: 'EDIT_PLACE',
+            contentType: 'place',
+            contentId: place.id,
+            contentTitle: placeName.trim(),
+            notes: `Updated category to ${category}, address to ${address}`
+          });
+        }
+        setTimeout(() => {
+          onSaved();
+          onClose();
+        }, 800);
+      } else {
+        setErrorMsg('Failed to save changes. Please try again.');
       }
-      setTimeout(() => {
-        onSaved();
-        onClose();
-      }, 1000);
-    } else {
-      setErrorMsg('Failed to save changes. Please try again.');
+    } catch (err: any) {
+      setIsSaving(false);
+      console.error('Error saving place changes:', err);
+      setErrorMsg(err?.message || 'Failed to save changes. Please try again.');
     }
   };
 

@@ -3,6 +3,7 @@ import { CultureItem, CultureCategory } from '../../types/culture';
 import { useCulture } from '../../context/CultureContext';
 import { useAuth } from '../../context/AuthContext';
 import { InteractiveDhemajiMap } from '../tourism/InteractiveDhemajiMap';
+import { compressImageFile, compressDataUrlIfNeeded } from '../../utils/imageCompressor';
 import {
   X,
   Trash2,
@@ -59,6 +60,7 @@ export const EditCultureModal: React.FC<EditCultureModalProps> = ({
   const [coverImage, setCoverImage] = useState<string>(item.coverImage || item.images?.[0] || '');
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -78,27 +80,39 @@ export const EditCultureModal: React.FC<EditCultureModalProps> = ({
     setCoverImage(imgUrl);
   };
 
-  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAddImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach((file) => {
-      if (images.length >= 8) {
-        setErrorMsg('Maximum 8 photos allowed.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        if (uploadEvent.target?.result) {
-          const resultStr = uploadEvent.target.result as string;
-          setImages(prev => [...prev, resultStr]);
-          if (!coverImage) {
-            setCoverImage(resultStr);
-          }
+    setIsCompressing(true);
+    setErrorMsg('');
+
+    try {
+      for (const file of Array.from(files)) {
+        if (images.length >= 8) {
+          setErrorMsg('Maximum 8 photos allowed.');
+          break;
         }
-      };
-      reader.readAsDataURL(file);
-    });
+
+        // Compress image using HTML5 Canvas to ensure payload never exceeds Firestore's 1MB document boundary
+        const compressedDataUrl = await compressImageFile(file, 1000, 1000, 0.75);
+
+        setImages(prev => {
+          if (prev.length >= 8) return prev;
+          const next = [...prev, compressedDataUrl];
+          if (!coverImage) {
+            setCoverImage(compressedDataUrl);
+          }
+          return next;
+        });
+      }
+    } catch (err: any) {
+      console.error('Image compression error:', err);
+      setErrorMsg('Could not process selected photograph.');
+    } finally {
+      setIsCompressing(false);
+      e.target.value = '';
+    }
   };
 
   const handleSave = async () => {
@@ -114,44 +128,57 @@ export const EditCultureModal: React.FC<EditCultureModalProps> = ({
     setIsSaving(true);
     setErrorMsg('');
 
-    const success = await updateCultureItem(item.id, {
-      title: title.trim(),
-      category,
-      description: description.trim(),
-      community: community.trim(),
-      villageOrArea: villageOrArea.trim(),
-      language: language.trim() || '',
-      history: history.trim() || '',
-      significance: significance.trim() || '',
-      videoUrl: videoUrl.trim() || '',
-      latitude,
-      longitude,
-      images,
-      coverImage: coverImage || images[0] || '',
-      status: item.status
-    });
+    try {
+      // Ensure all images are compressed before saving
+      const compressedImages = await Promise.all(
+        images.map(img => compressDataUrlIfNeeded(img, 1000, 1000, 0.72))
+      );
+      const chosenCover = coverImage || compressedImages[0] || '';
+      const compressedCover = await compressDataUrlIfNeeded(chosenCover, 1000, 1000, 0.72);
 
-    setIsSaving(false);
+      const result = await updateCultureItem(item.id, {
+        title: title.trim(),
+        category,
+        description: description.trim(),
+        community: community.trim(),
+        villageOrArea: villageOrArea.trim(),
+        language: language.trim() || '',
+        history: history.trim() || '',
+        significance: significance.trim() || '',
+        videoUrl: videoUrl.trim() || '',
+        latitude,
+        longitude,
+        images: compressedImages,
+        coverImage: compressedCover || compressedImages[0] || '',
+        status: item.status
+      });
 
-    if (success) {
-      setSuccessMsg('Cultural tradition updated successfully.');
-      if (user) {
-        await logAdminAction({
-          adminUid: user.uid,
-          adminEmail: user.email,
-          action: 'EDIT_CULTURE',
-          contentType: 'culture',
-          contentId: item.id,
-          contentTitle: title.trim(),
-          notes: `Updated community to ${community}`
-        });
+      setIsSaving(false);
+
+      if (result.success) {
+        setSuccessMsg('Cultural tradition updated successfully.');
+        if (user) {
+          await logAdminAction({
+            adminUid: user.uid,
+            adminEmail: user.email,
+            action: 'EDIT_CULTURE',
+            contentType: 'culture',
+            contentId: item.id,
+            contentTitle: title.trim(),
+            notes: `Updated community to ${community}`
+          });
+        }
+        setTimeout(() => {
+          onSaved();
+          onClose();
+        }, 800);
+      } else {
+        setErrorMsg(result.error || 'Failed to save changes. Please try again.');
       }
-      setTimeout(() => {
-        onSaved();
-        onClose();
-      }, 1000);
-    } else {
-      setErrorMsg('Failed to save changes. Please try again.');
+    } catch (err: any) {
+      setIsSaving(false);
+      console.error('Error saving culture changes:', err);
+      setErrorMsg(err?.message || 'Failed to save changes. Please try again.');
     }
   };
 
@@ -249,13 +276,18 @@ export const EditCultureModal: React.FC<EditCultureModalProps> = ({
                   Select cover photo or delete inaccurate media.
                 </span>
               </div>
-              <label className="px-3.5 py-1.5 rounded-xl bg-forest-900 text-gold text-xs font-bold uppercase cursor-pointer hover:bg-forest-800 transition-colors inline-flex items-center gap-1.5">
-                <Upload className="w-3.5 h-3.5" />
-                <span>Add Photo</span>
+              <label className={`px-3.5 py-1.5 rounded-xl bg-forest-900 text-gold text-xs font-bold uppercase transition-colors inline-flex items-center gap-1.5 ${isCompressing ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer hover:bg-forest-800'}`}>
+                {isCompressing ? (
+                  <div className="w-3.5 h-3.5 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5" />
+                )}
+                <span>{isCompressing ? 'Optimizing...' : 'Add Photo'}</span>
                 <input
                   type="file"
                   multiple
                   accept="image/*"
+                  disabled={isCompressing}
                   className="hidden"
                   onChange={handleAddImage}
                 />
