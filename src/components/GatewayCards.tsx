@@ -184,9 +184,9 @@ export const GatewayCards: React.FC<GatewayCardsProps> = ({
           <div>
             <div className="relative h-64 overflow-hidden">
               <img
-                alt="Illustrated Map of Dhemaji district with landmarks and rivers"
+                alt="Official Administrative Map of Dhemaji district with mouzas, sub-divisions, and rivers"
                 className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out"
-                src="/src/assets/images/dhemaji_district_map_1790770473279.jpg"
+                src="/src/assets/images/map1.jpg"
                 referrerPolicy="no-referrer"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-forest-900/80 via-transparent to-transparent" />

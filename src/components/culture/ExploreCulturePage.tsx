@@ -29,19 +29,14 @@ export const ExploreCulturePage: React.FC<ExploreCulturePageProps> = ({
   onOpenCreateCulture,
   onSelectCultureDetails
 }) => {
-  const { cultureItems } = useCulture();
+  const { approvedCultureItems, isLoadingCulture } = useCulture();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CultureCategory | 'All'>('All');
 
-  // Filtered items
+  // Filtered items directly from live approved Firestore documents
   const filteredCulture = useMemo(() => {
-    return cultureItems.filter(item => {
-      // Public website rule: only display approved culture entries
-      const isVisible = item.status === 'approved';
-
-      if (!isVisible) return false;
-
+    return approvedCultureItems.filter(item => {
       const matchesCategory =
         selectedCategory === 'All' || item.category === selectedCategory;
 
@@ -56,7 +51,7 @@ export const ExploreCulturePage: React.FC<ExploreCulturePageProps> = ({
 
       return matchesCategory && matchesSearch;
     });
-  }, [cultureItems, selectedCategory, searchQuery, user]);
+  }, [approvedCultureItems, selectedCategory, searchQuery]);
 
   return (
     <section className="pt-24 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto animate-fadeIn">
@@ -130,7 +125,24 @@ export const ExploreCulturePage: React.FC<ExploreCulturePageProps> = ({
       </div>
 
       {/* Culture Cards Grid */}
-      {filteredCulture.length === 0 ? (
+      {isLoadingCulture ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div
+              key={n}
+              className="bg-[#FCFAF6] rounded-3xl overflow-hidden border border-stone-200/80 animate-pulse h-96 flex flex-col justify-between p-6"
+            >
+              <div className="h-48 bg-stone-200/70 rounded-2xl mb-4" />
+              <div className="space-y-2">
+                <div className="h-4 bg-stone-200/70 rounded-md w-3/4" />
+                <div className="h-3 bg-stone-200/70 rounded-md w-full" />
+                <div className="h-3 bg-stone-200/70 rounded-md w-5/6" />
+              </div>
+              <div className="h-8 bg-stone-200/70 rounded-full w-1/2 mt-4" />
+            </div>
+          ))}
+        </div>
+      ) : filteredCulture.length === 0 ? (
         <div className="text-center py-16 bg-[#FCFAF6] rounded-3xl border border-dashed border-stone-300 max-w-xl mx-auto p-8">
           <div className="w-12 h-12 rounded-full bg-forest-900/10 text-forest-900 flex items-center justify-center mx-auto mb-3">
             <Feather className="w-5 h-5 text-forest-900" />

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Place } from '../../types/place';
 import { MapPin, Navigation, ZoomIn, ZoomOut, RotateCcw, Check, ExternalLink } from 'lucide-react';
 
-const DHEMAJI_MAP_SRC = '/src/assets/images/dhemaji_district_map_1790770473279.jpg';
+const DHEMAJI_MAP_SRC = '/src/assets/images/map1.jpg';
 
 interface InteractiveDhemajiMapProps {
   places?: Place[];
@@ -189,13 +189,13 @@ export const InteractiveDhemajiMap: React.FC<InteractiveDhemajiMapProps> = ({
       {/* Top Right District Info HUD */}
       <div className="absolute top-4 right-4 z-20 bg-forest-900/90 backdrop-blur-md border border-gold/30 rounded-2xl px-4 py-2.5 text-right shadow-lg">
         <span className="text-[10px] font-bold text-gold uppercase tracking-[0.2em] block">
-          Official District Cartography
+          Official Administrative Cartography
         </span>
         <h4 className="text-sm font-serif font-black text-white">
-          Dhemaji District Map
+          Dhemaji District Map (Scale: NTS)
         </h4>
         <p className="text-[10px] text-stone-300">
-          NH-52 • Jonai • Silapathar • Brahmaputra
+          Dhemaji &amp; Jonai Sub-Divisions • NH-52 • Brahmaputra
         </p>
       </div>
 

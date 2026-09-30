@@ -9,6 +9,7 @@ service cloud.firestore {
       return isAuthenticated() && (
         request.auth.token.email == 'boruahborajen2019@gmail.com' ||
         request.auth.token.email == 'gauravboruah777@gmail.com' ||
+        request.auth.token.email == 'gauravkishor108@gmail.com' ||
         request.auth.token.admin == true
       );
     }

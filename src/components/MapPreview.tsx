@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 
-const DHEMAJI_MAP_SRC = '/src/assets/images/dhemaji_district_map_1790770473279.jpg';
+const DHEMAJI_MAP_SRC = '/src/assets/images/map1.jpg';
 
 export const MapPreview: React.FC = () => {
   const [isZoomed, setIsZoomed] = useState(false);
 
   const landmarks = [
-    { name: 'Dhemaji (District HQ)', role: 'Administrative center, Maa Manipuri Than, Gerukamukh access', tag: 'HQ' },
-    { name: 'Silapathar', role: 'Commercial hub & transit route to Along/Arunachal Pradesh', tag: 'Town' },
-    { name: 'Jonai', role: 'Sub-divisional town, gateway to Pasighat & Poba Reserve Forest', tag: 'Gateway' },
-    { name: 'Likabali / Malinithan', role: 'Ancient 13th-century archaeological ruins at foothill border', tag: 'Heritage' },
-    { name: 'Simen Chapori', role: 'Vibrant riverside chapori ecosystem & Mising ethnic settlements', tag: 'Nature' },
-    { name: 'NH-52 & NH-52B', role: 'Major lifeline highways linking Dhemaji, Bogibeel Bridge & Dibrugarh', tag: 'Highway' }
+    { name: 'Dhemaji Sub-Division', role: 'Dhemaji, Bordoloni, Sissiborgaon & Machkhowa mouzas', tag: 'HQ' },
+    { name: 'Jonai Sub-Division', role: 'Jonai mouza, gateway to Pasighat & Poba Reserve Forest', tag: 'Sub-Div' },
+    { name: 'Brahmaputra River', role: 'Vast braided river frontier bordering Dibrugarh, Sibsagar & Tinsukia', tag: 'River' },
+    { name: 'National Highway 52', role: 'Lifeline arterial highway connecting Lakhimpur, Dhemaji & Jonai', tag: 'Highway' },
+    { name: 'Reserve Forests', role: 'Subansiri, Jiadhal, Jamjing & Poba protected ecological zones', tag: 'Forest' },
+    { name: 'Administrative Network', role: 'D.C. Office, S.D.O. Civil, Circle Offices & Thana police stations', tag: 'Admin' }
   ];
 
   return (

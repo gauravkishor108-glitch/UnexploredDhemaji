@@ -120,14 +120,15 @@ export const EditCultureModal: React.FC<EditCultureModalProps> = ({
       description: description.trim(),
       community: community.trim(),
       villageOrArea: villageOrArea.trim(),
-      language: language.trim() || undefined,
-      history: history.trim() || undefined,
-      significance: significance.trim() || undefined,
-      videoUrl: videoUrl.trim() || undefined,
+      language: language.trim() || '',
+      history: history.trim() || '',
+      significance: significance.trim() || '',
+      videoUrl: videoUrl.trim() || '',
       latitude,
       longitude,
       images,
-      coverImage: coverImage || images[0]
+      coverImage: coverImage || images[0] || '',
+      status: item.status
     });
 
     setIsSaving(false);
